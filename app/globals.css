@@ -15,9 +15,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  background: #040404;
-  /* Smooth scroll snap */
+  background: #05050f;
   scroll-behavior: auto;
+}
+
+body {
+  background: #05050f;
 }
 
 body {
