@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Lenis from "lenis";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useTransform } from "framer-motion";
 import Orb from "../components/Orb";
+import PlanetScene from "../components/PlanetScene";
 
 // ─── Feature data ─────────────────────────────────────────────────────────────
 const TOOLS = [
@@ -92,39 +93,10 @@ function Section3() {
         <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
           <div style={{ position: "relative", width: "clamp(300px, 40vw, 600px)", aspectRatio: "1/1" }}>
 
-            {/* Planets Stack */}
-            <motion.div
-              style={{ width: "100%", height: "100%", position: "absolute", inset: 0, willChange: "transform" }}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-            >
-              {TOOLS.map((tool, i) => (
-                <motion.img
-                  key={tool.planet}
-                  src={`/planets/${tool.planet}.png`}
-                  alt={tool.planet}
-                  initial={false}
-                  animate={{
-                    opacity: active === i ? 0.9 : 0,
-                    scale: active === i ? 1 : 0.85
-                  }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    borderRadius: "50%",
-                    willChange: "transform, opacity",
-                    pointerEvents: "none"
-                  }}
-                />
-              ))}
-            </motion.div>
-
-            {/* Atmospheric Overlay for 3D Depth */}
-            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", boxShadow: "inset -40px -40px 80px rgba(5,5,15,0.9), inset 10px 10px 30px rgba(255,255,255,0.15)", pointerEvents: "none" }} />
+            {/* Real 3D Planet Scene */}
+            <div style={{ position: "absolute", inset: 0, transform: "scale(1.15)" }}>
+              <PlanetScene activeIndex={active} />
+            </div>
 
             {/* Tech callout line 1 */}
             <AnimatePresence mode="wait">
