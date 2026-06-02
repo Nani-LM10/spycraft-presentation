@@ -15,15 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SpyCraft — AI-Powered Ad Creative Intelligence",
+  title: "SpyCraft — The Context Layer for AI Marketing",
   description:
-    "Track competitors, detect creative fatigue, and generate winning ad creatives. The intelligence platform for modern performance marketers.",
-  openGraph: {
-    title: "SpyCraft — AI-Powered Ad Creative Intelligence",
-    description:
-      "Track competitors, detect creative fatigue, and generate winning ad creatives.",
-    type: "website",
-  },
+    "SpyCraft is the intelligence layer that connects every tool in your marketing stack. Competitor intel, creative analysis, and AI-powered insights — unified.",
 };
 
 export default function RootLayout({
@@ -37,9 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
       style={{ background: "#040404" }}
     >
-      <body className="min-h-screen antialiased" style={{ background: "#040404" }}>
-        {children}
-      </body>
+      <body style={{ background: "#040404" }}>{children}</body>
     </html>
   );
 }
