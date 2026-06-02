@@ -64,7 +64,7 @@ export default function Nav() {
         </div>
         <span
           style={{
-            color: "#F5F5F5",
+            color: "#FF8AFF",
             fontSize: "0.9rem",
             fontWeight: 600,
             letterSpacing: "-0.025em",
@@ -81,7 +81,7 @@ export default function Nav() {
             key={label}
             href={`#${label.toLowerCase()}`}
             style={{
-              color: "rgba(245,245,245,0.4)",
+              color: "rgba(255,138,255,0.4)",
               fontSize: "0.8rem",
               textDecoration: "none",
               transition: "color 0.2s",
