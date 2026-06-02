@@ -1,13 +1,27 @@
 "use client";
 
-import React, { useRef, useMemo, Suspense, useEffect, useState } from "react";
+import React, {
+  useRef,
+  useMemo,
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import { Canvas, useFrame, extend } from "@react-three/fiber";
-import { shaderMaterial } from "@react-three/drei";
+import { shaderMaterial, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
-// ─── Shader Material ────────────────────────────────────────────────────────
+// ─── JSX type declarations ────────────────────────────────────────────────────
+
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    fluidMaterial: any;
+  }
+}
+
+// ─── Fluid Shader Material ────────────────────────────────────────────────────
 
 const FluidMaterial = shaderMaterial(
   {
@@ -90,19 +104,12 @@ const FluidMaterial = shaderMaterial(
 
 extend({ FluidMaterial });
 
-// JSX type for the extended material
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    fluidMaterial: any;
-  }
-}
-
-// ─── Fluid Orb Scene ─────────────────────────────────────────────────────────
+// ─── Fluid Orb (for hero/closing persistent canvas) ──────────────────────────
 
 function FluidOrb({ scale = 1 }: { scale?: number }) {
   const matRef = useRef<any>(null);
-  const mouse = useRef(new THREE.Vector2(0, 0));
   const meshRef = useRef<THREE.Mesh>(null);
+  const mouse = useRef(new THREE.Vector2(0, 0));
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -144,168 +151,217 @@ function FluidOrb({ scale = 1 }: { scale?: number }) {
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
 function Stars({ opacity = 1 }: { opacity?: number }) {
-  const geo = useMemo(() => {
-    const positions = new Float32Array(3000 * 3);
-    for (let i = 0; i < 3000; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return g;
-  }, []);
-
   const mat = useMemo(
     () =>
-      new THREE.PointsMaterial({
-        color: "#ffffff",
-        size: 0.06,
-        transparent: true,
-        opacity,
-      }),
+      new THREE.PointsMaterial({ color: "#ffffff", size: 0.05, transparent: true, opacity }),
     [opacity]
   );
-
+  const geo = useMemo(() => {
+    const pos = new Float32Array(3000 * 3);
+    for (let i = 0; i < 3000; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 60;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 60;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, []);
   return <points geometry={geo} material={mat} />;
 }
 
-// ─── Orbital Tool Dot ─────────────────────────────────────────────────────────
+// ─── Solar System ─────────────────────────────────────────────────────────────
 
-const TOOLS = [
-  { name: "Higgsfield", desc: "AI-native video generation for ad creatives." },
-  { name: "Klenty", desc: "Sales sequencing synced to your creative pipeline." },
-  { name: "Meta Ads", desc: "Live creative performance from your ad account." },
-  { name: "HubSpot", desc: "CRM signals that inform when creatives go stale." },
-  { name: "Claude MCP", desc: "LLM reasoning layer over all your marketing data." },
+const PLANETS = [
+  {
+    name: "Competitor Intel",
+    desc: "Real-time ad library scraping, AI creative tagging, winning hook detection.",
+    color: "#60a5fa",
+    emissive: "#1d4ed8",
+    speed: 0.38,
+    radius: 1.3,
+  },
+  {
+    name: "Discover Ads",
+    desc: "Smart search, automatic transcription, catch trends before they peak.",
+    color: "#2dd4bf",
+    emissive: "#0f766e",
+    speed: 0.27,
+    radius: 2.0,
+  },
+  {
+    name: "Analyze",
+    desc: "Detect fatigue instantly, see which hooks and formats are working and why.",
+    color: "#fbbf24",
+    emissive: "#b45309",
+    speed: 0.19,
+    radius: 2.8,
+  },
+  {
+    name: "Briefs",
+    desc: "AI scripting and storyboarding, data-informed creative direction.",
+    color: "#c084fc",
+    emissive: "#7e22ce",
+    speed: 0.13,
+    radius: 3.6,
+  },
+  {
+    name: "Craft",
+    desc: "Generate production-ready creatives in minutes from proven performance signals.",
+    color: "#f87171",
+    emissive: "#b91c1c",
+    speed: 0.09,
+    radius: 4.3,
+  },
 ];
 
-// ─── Section 3 & 4: Solar system DOM layer ────────────────────────────────────
+function OrbitRing({ radius }: { radius: number }) {
+  const obj = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 128; i++) {
+      const a = (i / 128) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({ color: "#ffffff", opacity: 0.07, transparent: true });
+    return new THREE.LineLoop(geo, mat);
+  }, [radius]);
 
-function SolarSystem({ activeToolIndex }: { activeToolIndex: number | null }) {
+  return <primitive object={obj} />;
+}
+
+function Planet({
+  planet,
+  index,
+  hovered,
+  onHover,
+}: {
+  planet: (typeof PLANETS)[0];
+  index: number;
+  hovered: number | null;
+  onHover: (i: number | null) => void;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const scaleVal = useRef(1);
+  const angle = useRef((index / PLANETS.length) * Math.PI * 2);
+
+  const isHovered = hovered === index;
+  const isDimmed = hovered !== null && !isHovered;
+
+  useFrame(({ clock }) => {
+    angle.current = (index / PLANETS.length) * Math.PI * 2 + clock.getElapsedTime() * planet.speed;
+    if (!meshRef.current || !matRef.current) return;
+    meshRef.current.position.x = Math.cos(angle.current) * planet.radius;
+    meshRef.current.position.y = Math.sin(angle.current) * planet.radius;
+
+    const targetScale = isHovered ? 2.4 : 1;
+    scaleVal.current = THREE.MathUtils.lerp(scaleVal.current, targetScale, 0.12);
+    meshRef.current.scale.setScalar(scaleVal.current);
+
+    const targetEmissive = isDimmed ? 0.3 : isHovered ? 5 : 2.5;
+    matRef.current.emissiveIntensity = THREE.MathUtils.lerp(
+      matRef.current.emissiveIntensity,
+      targetEmissive,
+      0.1
+    );
+    matRef.current.opacity = THREE.MathUtils.lerp(
+      matRef.current.opacity ?? 1,
+      isDimmed ? 0.35 : 1,
+      0.1
+    );
+  });
+
   return (
-    <div
-      style={{
-        position: "relative",
-        width: 420,
-        height: 420,
-      }}
+    <mesh
+      ref={meshRef}
+      onPointerEnter={(e) => { e.stopPropagation(); onHover(index); }}
+      onPointerLeave={() => onHover(null)}
     >
-      {/* Sun */}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%,-50%)",
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, #a855f7 0%, #6d28d9 60%, transparent 100%)",
-          boxShadow: "0 0 24px 8px rgba(168,85,247,0.5)",
-        }}
+      <sphereGeometry args={[0.14, 24, 24]} />
+      <meshStandardMaterial
+        ref={matRef}
+        color={planet.color}
+        emissive={planet.color}
+        emissiveIntensity={2.5}
+        transparent
+        opacity={1}
       />
-      {TOOLS.map((tool, i) => {
-        const angle = (i / TOOLS.length) * Math.PI * 2 - Math.PI / 2;
-        const r = 170;
-        const x = Math.cos(angle) * r;
-        const y = Math.sin(angle) * r;
-        const isActive = activeToolIndex === i;
-        const isDimmed = activeToolIndex !== null && !isActive;
-
-        return (
+      {isHovered && (
+        <Html
+          distanceFactor={10}
+          style={{ pointerEvents: "none", userSelect: "none" }}
+          zIndexRange={[20, 21]}
+        >
           <div
-            key={tool.name}
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-              transition: "opacity 0.6s ease",
-              opacity: isDimmed ? 0.18 : 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 6,
+              width: 210,
+              background: "rgba(5,5,15,0.88)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 12,
+              padding: "14px 18px",
+              backdropFilter: "blur(16px)",
+              transform: "translate(18px, -50%)",
+              boxShadow: `0 0 24px 0 ${planet.color}33`,
             }}
           >
-            <div
+            <p
               style={{
-                width: isActive ? 14 : 8,
-                height: isActive ? 14 : 8,
-                borderRadius: "50%",
-                background: isActive
-                  ? "radial-gradient(circle, #e2d9f3, #a855f7)"
-                  : "radial-gradient(circle, rgba(255,255,255,0.9), rgba(168,85,247,0.5))",
-                boxShadow: isActive
-                  ? "0 0 18px 6px rgba(168,85,247,0.7)"
-                  : "0 0 8px 3px rgba(168,85,247,0.3)",
-                transition: "all 0.5s ease",
-              }}
-            />
-            <span
-              style={{
-                fontSize: isActive ? "0.8rem" : "0.7rem",
-                color: isActive ? "#e2d9f3" : "rgba(226,217,243,0.55)",
-                fontWeight: isActive ? 600 : 400,
-                letterSpacing: "0.04em",
-                whiteSpace: "nowrap",
-                transition: "all 0.5s ease",
+                color: planet.color,
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                marginBottom: 6,
+                fontFamily: "var(--font-geist-sans, sans-serif)",
               }}
             >
-              {tool.name}
-            </span>
+              {planet.name}
+            </p>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.75)",
+                fontSize: "0.78rem",
+                lineHeight: 1.55,
+                fontFamily: "var(--font-geist-sans, sans-serif)",
+              }}
+            >
+              {planet.desc}
+            </p>
           </div>
-        );
-      })}
-
-      {/* Orbit ring — subtle dashed circle */}
-      <svg
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-        viewBox="0 0 420 420"
-      >
-        <circle
-          cx="210"
-          cy="210"
-          r="170"
-          fill="none"
-          stroke="rgba(168,85,247,0.08)"
-          strokeWidth="1"
-          strokeDasharray="3 6"
-        />
-      </svg>
-    </div>
+        </Html>
+      )}
+    </mesh>
   );
 }
 
-// ─── Persistent Canvas ────────────────────────────────────────────────────────
-
-function PersistentCanvas({
-  orbScale,
-  starsOpacity,
-}: {
-  orbScale: number;
-  starsOpacity: number;
-}) {
+function SolarSun() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (meshRef.current) meshRef.current.rotation.y = clock.getElapsedTime() * 0.4;
+  });
   return (
-    <Canvas
-      camera={{ position: [0, 0, 4], fov: 75 }}
-      style={{ position: "fixed", inset: 0, zIndex: 0 }}
-    >
-      <Suspense fallback={null}>
-        <FluidOrb scale={orbScale} />
-        {starsOpacity > 0 && <Stars opacity={starsOpacity} />}
-        <EffectComposer>
-          <Bloom intensity={1.5} luminanceThreshold={0.1} luminanceSmoothing={0.9} />
-        </EffectComposer>
-      </Suspense>
-    </Canvas>
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[0.28, 32, 32]} />
+      <meshStandardMaterial color="#a855f7" emissive="#a855f7" emissiveIntensity={4} />
+    </mesh>
+  );
+}
+
+function SolarScene() {
+  const [hovered, setHovered] = useState<number | null>(null);
+  return (
+    <>
+      <ambientLight intensity={0.15} />
+      <pointLight position={[0, 0, 3]} intensity={3} color="#a855f7" />
+      <SolarSun />
+      {PLANETS.map((planet, i) => (
+        <React.Fragment key={planet.name}>
+          <OrbitRing radius={planet.radius} />
+          <Planet planet={planet} index={i} hovered={hovered} onHover={setHovered} />
+        </React.Fragment>
+      ))}
+    </>
   );
 }
 
@@ -324,40 +380,33 @@ function Nav() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        pointerEvents: "auto",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* SpyCraft logo mark — purple bars */}
         <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
           <rect width="26" height="26" rx="6" fill="#6d28d9" />
           <rect x="5" y="7" width="16" height="3" rx="1.5" fill="white" fillOpacity="0.9" />
           <rect x="5" y="12" width="11" height="3" rx="1.5" fill="white" fillOpacity="0.7" />
           <rect x="5" y="17" width="7" height="3" rx="1.5" fill="white" fillOpacity="0.5" />
         </svg>
-        <span
-          style={{
-            color: "#f5f5f5",
-            fontSize: "0.9rem",
-            fontWeight: 600,
-            letterSpacing: "-0.025em",
-          }}
-        >
+        <span style={{ color: "#ffffff", fontSize: "0.9rem", fontWeight: 600, letterSpacing: "-0.025em" }}>
           SpyCraft
         </span>
       </div>
       <a
         href="#access"
         style={{
-          color: "#f5f5f5",
-          background: "rgba(109,40,217,0.25)",
-          border: "1px solid rgba(168,85,247,0.3)",
+          color: "#ffffff",
+          background: "rgba(109,40,217,0.3)",
+          border: "1px solid rgba(168,85,247,0.35)",
           fontSize: "0.78rem",
           fontWeight: 500,
           padding: "7px 18px",
           borderRadius: 6,
           textDecoration: "none",
           backdropFilter: "blur(8px)",
-          transition: "background 0.2s",
+          letterSpacing: "0.01em",
         }}
       >
         Request Access
@@ -366,60 +415,57 @@ function Nav() {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
 
-  // Section tracking
+  // Track scroll section (0–3)
   const [section, setSection] = useState(0);
-  const [activeToolIndex, setActiveToolIndex] = useState<number | null>(null);
-
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onScroll = () => {
-      const progress = el.scrollTop / (el.scrollHeight - el.clientHeight);
-      const s = Math.round(progress * 4); // 5 sections, 0-4
-      setSection(Math.min(s, 4));
-      if (s === 3) {
-        const toolProgress = (progress - 0.6) / 0.2;
-        const idx = Math.floor(toolProgress * TOOLS.length);
-        setActiveToolIndex(Math.min(Math.max(idx, 0), TOOLS.length - 1));
-      } else {
-        setActiveToolIndex(null);
-      }
+      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
+      setSection(Math.min(Math.round(pct * 3), 3));
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Orb scale: hero=1, transition shrinks to 0.15, solar=0.15, spotlight=0.15, closing expands back to 1.2
-  const orbScale = useTransform(
-    scrollYProgress,
-    [0, 0.2, 0.4, 0.8, 1],
-    [1, 0.18, 0.15, 0.15, 1.4]
-  );
+  // Orb scale — large in hero, shrinks on section 1, tiny in 2, expands in 3
+  const orbScale = useTransform(scrollYProgress, [0, 0.25, 0.5, 0.75, 1], [1, 0.18, 0.12, 0.12, 1.5]);
+  const starsOpacity = useTransform(scrollYProgress, [0.1, 0.28], [0, 0.85]);
 
-  const starsOpacity = useTransform(scrollYProgress, [0.12, 0.25], [0, 0.9]);
-
-  // Canvas gets reactive values via state (re-renders on scroll)
   const [orbScaleVal, setOrbScaleVal] = useState(1);
   const [starsOpacityVal, setStarsOpacityVal] = useState(0);
-
   useEffect(() => {
-    const unsubOrb = orbScale.on("change", setOrbScaleVal);
-    const unsubStars = starsOpacity.on("change", setStarsOpacityVal);
-    return () => { unsubOrb(); unsubStars(); };
+    const u1 = orbScale.on("change", setOrbScaleVal);
+    const u2 = starsOpacity.on("change", setStarsOpacityVal);
+    return () => { u1(); u2(); };
   }, [orbScale, starsOpacity]);
 
   return (
-    <div style={{ background: "#05050f", color: "#f5f5f5" }}>
-      <PersistentCanvas orbScale={orbScaleVal} starsOpacity={starsOpacityVal} />
+    <div style={{ background: "#05050f" }}>
+      {/* Fixed background canvas — orb + stars */}
+      <Canvas
+        camera={{ position: [0, 0, 4], fov: 75 }}
+        style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
+      >
+        <Suspense fallback={null}>
+          {/* Hide orb behind solar section (section 2) */}
+          {section !== 2 && <FluidOrb scale={orbScaleVal} />}
+          {starsOpacityVal > 0 && <Stars opacity={starsOpacityVal} />}
+          <EffectComposer>
+            <Bloom intensity={1.5} luminanceThreshold={0.1} luminanceSmoothing={0.9} />
+          </EffectComposer>
+        </Suspense>
+      </Canvas>
+
       <Nav />
 
-      {/* Scroll container */}
+      {/* Scroll container — 4 snap sections */}
       <div
         ref={containerRef}
         style={{
@@ -430,7 +476,7 @@ export default function Home() {
           zIndex: 10,
         }}
       >
-        {/* ── Section 1: Hero ─────────────────────────── */}
+        {/* ── 1. Hero ──────────────────────────────────────── */}
         <section
           style={{
             height: "100vh",
@@ -444,29 +490,29 @@ export default function Home() {
           }}
         >
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 48 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            transition={{ duration: 1.3, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             style={{
-              fontSize: "clamp(2.6rem, 7vw, 6rem)",
+              fontSize: "clamp(2.8rem, 7.5vw, 6.4rem)",
               fontWeight: 800,
-              letterSpacing: "-0.04em",
-              lineHeight: 1.05,
-              maxWidth: 800,
-              color: "#f5f5f5",
+              letterSpacing: "-0.045em",
+              lineHeight: 1.03,
+              color: "#ffffff",
+              maxWidth: 820,
             }}
           >
             SpyCraft is the<br />context layer.
           </motion.h1>
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            transition={{ duration: 1, delay: 0.85, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             style={{
-              marginTop: 24,
-              fontSize: "1.15rem",
-              color: "rgba(226,217,243,0.55)",
-              letterSpacing: "0.02em",
+              marginTop: 28,
+              fontSize: "1.2rem",
+              color: "rgba(255,255,255,0.55)",
+              letterSpacing: "0.01em",
               fontWeight: 400,
             }}
           >
@@ -476,16 +522,16 @@ export default function Home() {
             href="#access"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.4, duration: 0.8 }}
+            transition={{ delay: 1.5, duration: 0.9 }}
             style={{
-              marginTop: 44,
+              marginTop: 48,
               display: "inline-block",
-              background: "rgba(109,40,217,0.3)",
+              background: "rgba(109,40,217,0.28)",
               border: "1px solid rgba(168,85,247,0.4)",
-              color: "#e2d9f3",
-              fontSize: "0.9rem",
+              color: "#ffffff",
+              fontSize: "0.88rem",
               fontWeight: 600,
-              padding: "12px 32px",
+              padding: "13px 34px",
               borderRadius: 8,
               textDecoration: "none",
               backdropFilter: "blur(8px)",
@@ -496,7 +542,7 @@ export default function Home() {
           </motion.a>
         </section>
 
-        {/* ── Section 2: Transition ───────────────────── */}
+        {/* ── 2. Transition ────────────────────────────────── */}
         <section
           style={{
             height: "100vh",
@@ -511,151 +557,131 @@ export default function Home() {
         >
           <AnimatePresence>
             {section >= 1 && (
-              <motion.p
-                key="transition-text"
-                initial={{ opacity: 0, y: 30 }}
+              <motion.div
+                key="transition"
+                initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                style={{
-                  fontSize: "clamp(1.8rem, 5vw, 3.6rem)",
-                  fontWeight: 700,
-                  letterSpacing: "-0.03em",
-                  color: "#f5f5f5",
-                  maxWidth: 640,
-                }}
-              >
-                At the center<br />of your stack.
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </section>
-
-        {/* ── Section 3: Solar System ─────────────────── */}
-        <section
-          style={{
-            height: "100vh",
-            scrollSnapAlign: "start",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 48,
-          }}
-        >
-          <AnimatePresence>
-            {section >= 2 && (
-              <motion.div
-                key="solar-content"
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 40,
-                }}
+                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <p
                   style={{
-                    fontSize: "0.78rem",
-                    fontWeight: 500,
-                    letterSpacing: "0.18em",
-                    color: "rgba(168,85,247,0.6)",
-                    textTransform: "uppercase",
+                    fontSize: "clamp(1.9rem, 5.5vw, 4rem)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.035em",
+                    color: "#ffffff",
+                    lineHeight: 1.1,
+                    maxWidth: 600,
                   }}
                 >
-                  Connected integrations
+                  At the center<br />of your stack.
                 </p>
-                <SolarSystem activeToolIndex={null} />
                 <p
                   style={{
-                    fontSize: "clamp(1rem, 2.5vw, 1.4rem)",
-                    color: "rgba(226,217,243,0.45)",
+                    marginTop: 20,
+                    color: "rgba(255,255,255,0.4)",
+                    fontSize: "1rem",
                     letterSpacing: "0.01em",
-                    maxWidth: 400,
-                    textAlign: "center",
                   }}
                 >
-                  Five tools. One intelligence layer.<br />Zero context switching.
+                  Every tool. One intelligence layer.
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </section>
 
-        {/* ── Section 4: Tool Spotlight ───────────────── */}
+        {/* ── 3. Solar System ──────────────────────────────── */}
         <section
           style={{
             height: "100vh",
             scrollSnapAlign: "start",
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 80,
-            padding: "0 48px",
+            position: "relative",
+            background: "#05050f", // opaque to cover persistent canvas
+            overflow: "hidden",
           }}
         >
-          <AnimatePresence>
-            {section >= 3 && (
-              <motion.div
-                key="spotlight-content"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 80,
-                  width: "100%",
-                  maxWidth: 960,
-                }}
-              >
-                <SolarSystem activeToolIndex={activeToolIndex} />
-                <div style={{ flex: 1, minWidth: 260 }}>
-                  {TOOLS.map((tool, i) => (
-                    <div
-                      key={tool.name}
-                      style={{
-                        marginBottom: 28,
-                        opacity: activeToolIndex === i ? 1 : 0.2,
-                        transition: "opacity 0.5s ease",
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontSize: "1.1rem",
-                          fontWeight: 700,
-                          letterSpacing: "-0.02em",
-                          color: "#f5f5f5",
-                          marginBottom: 4,
-                        }}
-                      >
-                        {tool.name}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "0.85rem",
-                          color: "rgba(226,217,243,0.5)",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {tool.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Three.js canvas for planets */}
+          <div style={{ position: "absolute", inset: 0 }}>
+            <Canvas camera={{ position: [0, 0, 8], fov: 54 }}>
+              <Suspense fallback={null}>
+                <SolarScene />
+                <EffectComposer>
+                  <Bloom intensity={2.5} luminanceThreshold={0.05} luminanceSmoothing={0.6} />
+                </EffectComposer>
+              </Suspense>
+            </Canvas>
+          </div>
+
+          {/* Text overlay — above canvas */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              padding: "80px 48px 0",
+              pointerEvents: "none",
+            }}
+          >
+            <AnimatePresence>
+              {section >= 2 && (
+                <motion.div
+                  key="solar-label"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                >
+                  <p
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      letterSpacing: "0.18em",
+                      color: "rgba(168,85,247,0.7)",
+                      textTransform: "uppercase",
+                      marginBottom: 10,
+                    }}
+                  >
+                    SpyCraft integrations
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "clamp(1.6rem, 3.5vw, 2.6rem)",
+                      fontWeight: 700,
+                      letterSpacing: "-0.03em",
+                      color: "#ffffff",
+                      lineHeight: 1.1,
+                      maxWidth: 420,
+                    }}
+                  >
+                    Five features.<br />One context layer.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom hint */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 32,
+              left: 0,
+              right: 0,
+              textAlign: "center",
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          >
+            <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "0.72rem", letterSpacing: "0.12em" }}>
+              HOVER A PLANET TO EXPLORE
+            </p>
+          </div>
         </section>
 
-        {/* ── Section 5: Closing ──────────────────────── */}
+        {/* ── 4. Closing ───────────────────────────────────── */}
         <section
           id="access"
           style={{
@@ -670,23 +696,23 @@ export default function Home() {
           }}
         >
           <AnimatePresence>
-            {section >= 4 && (
+            {section >= 3 && (
               <motion.div
-                key="closing-content"
+                key="closing"
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}
+                transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}
               >
                 <h2
                   style={{
-                    fontSize: "clamp(2.4rem, 6.5vw, 5.5rem)",
+                    fontSize: "clamp(2.6rem, 7vw, 5.8rem)",
                     fontWeight: 800,
-                    letterSpacing: "-0.04em",
-                    lineHeight: 1.05,
-                    color: "#f5f5f5",
-                    maxWidth: 780,
+                    letterSpacing: "-0.045em",
+                    lineHeight: 1.04,
+                    color: "#ffffff",
+                    maxWidth: 800,
                   }}
                 >
                   Built for the teams<br />that move fast.
@@ -694,9 +720,10 @@ export default function Home() {
                 <p
                   style={{
                     fontSize: "1rem",
-                    color: "rgba(226,217,243,0.45)",
+                    color: "rgba(255,255,255,0.42)",
                     maxWidth: 440,
-                    lineHeight: 1.6,
+                    lineHeight: 1.65,
+                    marginTop: 4,
                   }}
                 >
                   SpyCraft connects your entire marketing stack into one living intelligence layer — so you never lose context, never repeat work.
@@ -706,10 +733,10 @@ export default function Home() {
                   style={{
                     display: "inline-block",
                     background: "#6d28d9",
-                    color: "#f5f5f5",
+                    color: "#ffffff",
                     fontSize: "0.9rem",
                     fontWeight: 600,
-                    padding: "14px 36px",
+                    padding: "14px 38px",
                     borderRadius: 8,
                     textDecoration: "none",
                     letterSpacing: "0.01em",
